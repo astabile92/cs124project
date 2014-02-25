@@ -37,6 +37,34 @@ class Translator:
 		tr.read_data(filename)
 		return tr.corpus
 		
+	def translation_to_str(self, translation):
+		punctuation = ",.:;"
+		str = ""
+		for elem in translation:
+			if elem[0] in punctuation:
+				str = str + elem[0]
+			else:
+				str = str + " " + elem[0]
+		return str
+		
+	def apply_postprocessing(self, translation):
+		punctuation = ".,;:"
+		#add articles
+		i = 0
+		while i < len(translation):
+			word_duple = translation[i]
+			word = word_duple[0]
+			tag = word_duple[1]
+			
+			#Capitalize proper nouns:
+			if tag[0] == 'N' and tag[1] == 'p':		#it's a proper noun
+				new_word = word.capitalize()
+				translation[i][0] = new_word
+			i += 1
+	
+		#let's try to get Subject Verb Object word order
+		print translation
+	
 	def translate(self, corpus_filename, tagged_corpus_filename):
 		print "BEGINNING TRANSLATION\n"
 		f = open(corpus_filename, 'r')
@@ -49,16 +77,20 @@ class Translator:
 				tag_info = word_triple[1]	#not used yet
 				lemma = word_triple[2]		#not used yet
 				if word in punctuation:
-					translation.append(word)
+					translation.append([word, word])
 				elif word in self.dictionary:
 					info = self.dictionary[word].split('.')
 					english_word = info[0]		#info[1], if it exists, would be the Case (dat, gen, etc.),
 												#  but the tagger should have provided this already
-					translation.append(english_word)
+					english_word_duple = [english_word, tag_info]
+					translation.append(english_word_duple)
+			
+			self.apply_postprocessing(translation)
+			
 			print "Original sentence:"
 			print f.readline()[:-1]
 			print "Translated as:"
-			print translation
+			print self.translation_to_str(translation)
 			print ""
 		print "DONE"
 
