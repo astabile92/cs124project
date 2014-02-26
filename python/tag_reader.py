@@ -13,7 +13,7 @@ class TagReader:
 		
 		So, you might iterate through the corpus as follows:
 		for sentence in self.corpus:
-			for word in sentence:
+			for word_triple in sentence:
 				#do stuff
 		"""
 		self.corpus = []	#see above
@@ -61,7 +61,6 @@ class TagReader:
 		"""
 		Read in the corpus at the given filename
 		"""
-		
 		punctuation = ".,:;"
 		cur_sentence = []
 		f = open(filename, 'r')
