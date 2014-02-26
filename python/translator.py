@@ -140,7 +140,6 @@ class Translator:
 			tag = word_duple[1]
 			if tag[0] == 'N' and tag[4] == 'g':	#it's a genitive noun
 				if i == 0 or not translation[i-1][1][0] == 'V' and not translation[i-1][1][0] == 'S':	#not preceded by a Verb OR "Adposition" (preposition)
-					print "BOOM - Genitive Noun: ", word
 					if i > 0 and translation[i-1][1][0] == 'M':		#preceded by numeral -- put "of" before that
 						translation.insert(i-1, ["of", "#aux"])
 					elif i > 0 and translation[i-1][1][0] == 'A' and translation[i-1][1][5] == 'g':	#preceded by genitive adjective
@@ -150,6 +149,20 @@ class Translator:
 					i += 1
 			i += 1
 
+	#STRATEGY 7
+	def interpret_datives(self, translation):
+		i = 0
+		while i < len(translation):
+			#do stuff
+			word_duple = translation[i]
+			word = word_duple[0]
+			tag = word_duple[1]
+			if tag[0] == 'P' and tag[5] == 'd' or tag[0] == 'N' and tag[4] == 'd':	#it's a dative (pro)noun
+				if i == 0 or not translation[i-1][1][0] == 'S':	#not preceded by an adposition already
+					translation.insert(i, ["to", "#aux"])			#or also, "for"
+					i += 1
+			i += 1
+	
 	def translate(self, corpus_filename, tagged_corpus_filename):
 		print "BEGINNING TRANSLATION\n"
 		f = open(corpus_filename, 'r')		
@@ -175,8 +188,9 @@ class Translator:
 			print f.readline()[:-1]
 			print "Initial translation:"
 			print self.translation_to_str(translation)
-			print "After genitive handling:"
+			print "After genitive and dative handling:"
 			self.interpret_genitives(translation)
+			self.interpret_datives(translation)
 			print self.translation_to_str(translation)
 			print "After group adjectives:"
 			new_translation = self.group_nouns_adj(translation)
