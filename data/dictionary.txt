@@ -150,4 +150,4 @@
 набережной:waterfront
 покраснела:blushed
 познакомиться:to meet
-интересоваться:to take an interested in
+интересоваться:to take an interest in
