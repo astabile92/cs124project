@@ -75,7 +75,6 @@ class Translator:
 		return result
 	
 	#STRATEGY 2
-		#perhaps also for adding articles?
 	"""
 	Returns a NEW translation array
 	"""
@@ -109,10 +108,6 @@ class Translator:
 					else:
 						j += 1
 				noun_phrase.append(word_duple)
-				"""
-				if not tag[1] == 'p':	#it's not a proper noun
-					noun_phrase.insert(0, ["the", "#aux"])
-				"""
 				new_translation.append(noun_phrase)
 			else:
 				has_noun = False
@@ -157,10 +152,51 @@ class Translator:
 			word_duple = translation[i]
 			word = word_duple[0]
 			tag = word_duple[1]
-			if tag[0] == 'P' and tag[5] == 'd' or tag[0] == 'N' and tag[4] == 'd':	#it's a dative (pro)noun
+			if (tag[0] == 'P' and tag[5] == 'd') or (tag[0] == 'N' and tag[4] == 'd'):	#it's a dative (pro)noun
 				if i == 0 or not translation[i-1][1][0] == 'S':	#not preceded by an adposition already
 					translation.insert(i, ["to", "#aux"])			#or also, "for"
 					i += 1
+			i += 1
+	
+	#STRATEGY 5
+	#apply this AFTER moving around adjectives
+	def add_articles(self, translation):
+		i = 0
+		vowels = "aeiou"
+		while i < len(translation):
+			#do stuff
+			word_duple = translation[i]
+			tag = word_duple[1]
+			if tag[0] == 'N' and not tag[1] == 'p' and not tag[4] == 'g':		#non-proper noun, not in genitive case
+				j = i - 1
+				while j > 0 and translation[j][1][0] == 'A':
+					j -= 1
+				articles = ["the"]
+				if tag[3] == 's':	#singular nouns could take 'a' or 'the'
+					next_word = translation[j+1][0]
+					if next_word[0] in vowels:
+						articles.append("an")
+					else:
+						articles.append("a")
+				translation.insert(j+1, [articles[-1], "#aux"])
+				i += 1
+			i += 1
+	
+	#STRATEGY 6
+	def add_subjects(self, translation):
+		i = 0
+		found_noun = False
+		while i < len(translation) and not translation[i][0] in self.punctuation:
+			word_duple = translation[i]
+			tag = word_duple[1]
+			if tag[0] == 'N' or tag[0] == 'P':
+				found_noun = True
+			elif tag[0] == 'V' and not found_noun:
+				if tag[5] == 's':
+					translation.insert(i, ["it", "P--nsn--"])
+				else:
+					translation.insert(i, ["they", "P--npn--"])
+				i += 1
 			i += 1
 	
 	def translate(self, corpus_filename, tagged_corpus_filename):
@@ -183,7 +219,7 @@ class Translator:
 					translation.append(english_word_duple)
 			
 			self.apply_postprocessing(translation)
-						
+			
 			print "Original sentence:"
 			print f.readline()[:-1]
 			print "Initial translation:"
@@ -192,9 +228,11 @@ class Translator:
 			self.interpret_genitives(translation)
 			self.interpret_datives(translation)
 			print self.translation_to_str(translation)
-			print "After group adjectives:"
-			new_translation = self.group_nouns_adj(translation)
-			print self.translation_to_str(self.flatten_list(new_translation))
+			print "After add articles and group adjectives:"
+			new_translation = self.flatten_list(self.group_nouns_adj(translation))
+			self.add_articles(new_translation)
+			self.add_subjects(new_translation)
+			print self.translation_to_str(new_translation)
 			print new_translation
 			print ""
 		print "DONE"
