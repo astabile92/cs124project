@@ -1,4 +1,4 @@
-import math, collections, re
+import math, collections, re, sys
 
 class LaplaceBigramLanguageModel:
 
@@ -25,6 +25,7 @@ class LaplaceBigramLanguageModel:
     self.V = len(self.LaplaceUnigramCounts)
     self.total = sum(self.LaplaceUnigramCounts.values())
 
+  #note that this isn't normalizing at all by the length of the sentence...should it?
   def score(self, sentence):
     score = 0.0
     for i in xrange(1,len(sentence)):
@@ -37,38 +38,37 @@ class LaplaceBigramLanguageModel:
 
 
 
-trainPath = '../data/language_model_training_corpus.txt'
-f = open(trainPath)
-trainingCorpus = []
-for line in f:
-    sentence = re.findall(r"[\w']+|[.,!?;]", line.lower())
-    if len(sentence) > 0:
-        sentence = ['<s>'] + sentence + ['</s>']
-        trainingCorpus.append(sentence)
+def main(args):
+	trainPath = '../data/language_model_training_corpus.txt'
+	f = open(trainPath)
+	trainingCorpus = []
+	for line in f:
+	    sentence = re.findall(r"[\w']+|[.,!?;]", line.lower())
+	    if len(sentence) > 0:
+	        sentence = ['<s>'] + sentence + ['</s>']
+	        trainingCorpus.append(sentence)
+	
+	lm = LaplaceBigramLanguageModel(trainingCorpus)
 
-lm = LaplaceBigramLanguageModel(trainingCorpus)
+	testPath = '../data/language_model_training_corpus.txt'
+	f2 = open(testPath)
+	maxScore = float("-inf")
+	maxScoreSentence = ''
+	f2 = ["he affectionately beckoned to oneself spitz and, when that approached, wagged him finger."]
+	for line in f2:
+	    sentence = re.findall(r"[\w']+|[.,!?;]", line.lower())
+	    if len(sentence) > 0:
+        	sentence = ['<s>'] + sentence + ['</s>']
+	        score = lm.score(sentence)
+    	    if score > maxScore:
+        	    maxScore = score
+	            maxScoreSentence = line
 
-testPath = '../data/language_model_training_corpus.txt'
-f2 = open(testPath)
-maxScore = float("-inf")
-maxScoreSentence = ''
-f2 = ["he affectionately beckoned to oneself spitz and, when that approached, wagged him finger."]
-for line in f2:
-    sentence = re.findall(r"[\w']+|[.,!?;]", line.lower())
-    if len(sentence) > 0:
-        sentence = ['<s>'] + sentence + ['</s>']
-        score = lm.score(sentence)
-        if score > maxScore:
-            maxScore = score
-            maxScoreSentence = line
+	print maxScoreSentence
+	print maxScore
 
-print maxScoreSentence
-print maxScore
-
-
-
-
-
-
+if __name__ == '__main__':
+	args = sys.argv[1:]
+	main(args)
 
 

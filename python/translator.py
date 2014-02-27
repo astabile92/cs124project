@@ -6,6 +6,7 @@ import os
 import re
 
 from tag_reader import TagReader
+from LaplaceBigramLanguageModel import LaplaceBigramLanguageModel
 
 class Translator:
 
@@ -47,22 +48,18 @@ class Translator:
 				str = str + " " + elem[0]
 		return str
 		
-	def apply_postprocessing(self, translation):
+	def capitalize_proper_nouns(self, translation):
 		#add articles
 		i = 0
 		while i < len(translation):
 			word_duple = translation[i]
 			word = word_duple[0]
 			tag = word_duple[1]
-			
-			#Capitalize proper nouns:
 			if tag[0] == 'N' and tag[1] == 'p':		#it's a proper noun
 				new_word = word.capitalize()
 				translation[i][0] = new_word
 			i += 1
-	
-		#let's try to get Subject Verb Object word order
-	
+		
 	#Needed for Strategy 2
 	def flatten_list(self, list):
 		result = []
@@ -78,7 +75,7 @@ class Translator:
 	"""
 	Returns a NEW translation array
 	"""
-	def group_nouns_adj(self, old_translation):
+	def group_nouns_with_adj(self, old_translation):
 		translation = old_translation[:]
 		new_translation = []
 		i = 0
@@ -120,7 +117,7 @@ class Translator:
 				if not has_noun:	#Make sure this is not an Adjective which is followed by a matching Noun
 					new_translation.append(word_duple)
 			i += 1
-		return new_translation
+		return self.flatten_list(new_translation)
 	
 	#STRATEGY 3
 	"""
@@ -147,6 +144,7 @@ class Translator:
 	#STRATEGY 7
 	def interpret_datives(self, translation):
 		i = 0
+		possible_results = []
 		while i < len(translation):
 			#do stuff
 			word_duple = translation[i]
@@ -154,20 +152,29 @@ class Translator:
 			tag = word_duple[1]
 			if (tag[0] == 'P' and tag[5] == 'd') or (tag[0] == 'N' and tag[4] == 'd'):	#it's a dative (pro)noun
 				if i == 0 or not translation[i-1][1][0] == 'S':	#not preceded by an adposition already
-					translation.insert(i, ["to", "#aux"])			#or also, "for"
+					#Update possible results:
+					for preposition in ["to", "for", "at"]:
+						result = translation[:]
+						result.insert(i, [preposition, "#aux"])
+						possible_results.append(result)
+					possible_results.append(translation[:])		#no preposition
+					#Update passed-in translation:
+					translation.insert(i, ["to", "#aux"])
 					i += 1
 			i += 1
+		return possible_results
 	
 	#STRATEGY 5
 	#apply this AFTER moving around adjectives
 	def add_articles(self, translation):
 		i = 0
 		vowels = "aeiou"
+		possible_results = []
 		while i < len(translation):
 			#do stuff
 			word_duple = translation[i]
 			tag = word_duple[1]
-			if tag[0] == 'N' and not tag[1] == 'p' and not tag[4] == 'g':		#non-proper noun, not in genitive case
+			if tag[0] == 'N' and not tag[1] == 'p':		#non-proper noun [, not in genitive case??]
 				j = i - 1
 				while j > 0 and translation[j][1][0] == 'A':
 					j -= 1
@@ -178,9 +185,18 @@ class Translator:
 						articles.append("an")
 					else:
 						articles.append("a")
+				
+				#Update possible results:
+				for article in articles:
+					result = translation[:]
+					result.insert(j+1, [article, "#aux"])
+					possible_results.append(result)
+				possible_results.append(translation[:])		#no article
+				#Update passed-in translation:
 				translation.insert(j+1, [articles[-1], "#aux"])
 				i += 1
 			i += 1
+		return possible_results
 	
 	#STRATEGY 6
 	def add_subjects(self, translation):
@@ -205,23 +221,100 @@ class Translator:
 		corpus = self.read_tagged_corpus(tagged_corpus_filename)
 		for sentence in corpus:
 			translation = []
-			for word_triple in sentence:
-				word = word_triple[0]
-				tag_info = word_triple[1]	#not used yet
-				lemma = word_triple[2]		#not used yet
+			"""
+			Here, we should apply the russian -> russian rules
+			Then, we can move on to the following for-loop
+			"""
+			for word_tuple in sentence:
+				word = word_tuple[0]
+				tag_info = word_tuple[1]
 				if word in self.punctuation:
 					translation.append([word, word])
+				elif len(word_tuple) > 3 and not word_tuple[3] == "":
+					translation.append([word_tuple[3], tag_info])
 				elif word in self.dictionary:
 					info = self.dictionary[word].split('.')
 					english_word = info[0]		#info[1], if it exists, would be the Case (dat, gen, etc.),
 												#  but the tagger should have provided this already
 					english_word_duple = [english_word, tag_info]
 					translation.append(english_word_duple)
+			"""
+			At this point, the russian -> russian rules should have been applied, so
+			"translation" should contain an english gloss of the russian
+			"""
+			self.capitalize_proper_nouns(translation)
+			"""
+			Now, apply the english -> english rules, and keep track of candidates
+			"""
+			translation_candidates = [ translation[:] ]
+			#Apply Genitive rule:
+			self.interpret_genitives(translation)
+			#Apply Dative rule (many possible results):
+			all_results = []
+			for tc in translation_candidates:
+				results = self.interpret_datives(tc[:])
+				for r in results:
+					all_results.append(r)
+			for r in all_results:
+				translation_candidates.append(r)
+			#Apply reordering rule:
+			old_candidates = translation_candidates[:]
+			for t in old_candidates:
+				new_t = self.group_nouns_with_adj(t)
+				translation_candidates.append(new_t)
+			#Apply articles rule:
+			all_results = []
+			for tc in translation_candidates:
+				results = self.add_articles(tc[:])
+				for r in results:
+					all_results.append(r)
+			for r in all_results:
+				translation_candidates.append(r)
+			#Apply subjects rule:
+			for tc in translation_candidates:
+				self.add_subjects(tc)
+			"""
+			Now, build the Language Model, which will choose the best candidate
+			"""
+			#DRAFT
+			train_file = open('../data/language_model_training_corpus.txt')
+			trainingCorpus = []
+			for line in train_file:
+			    sentence = re.findall(r"[\w']+|[.,!?;]", line.lower())
+			    if len(sentence) > 0:
+			        sentence = ['<s>'] + sentence + ['</s>']
+			        trainingCorpus.append(sentence)
+			lm = LaplaceBigramLanguageModel(trainingCorpus)
 			
-			self.apply_postprocessing(translation)
+			"""
+			Finally, use the Language Model to pick the best candidate!
+			"""
+			maxScore = float("-inf")
+			maxScoreSentence = ""
+			for tc in translation_candidates:
+				tc_string = self.translation_to_str(tc)
+				sentence = re.findall(r"[\w']+|[.,!?;]", tc_string.lower())
+				if len(sentence) > 0:
+					sentence = ['<s>'] + sentence + ['</s>']
+					score = lm.score(sentence)
+					#print tc_string
+					#print "\tScore: ", score
+					if score / len(sentence) > maxScore:	#normalizing here!
+						maxScore = score
+						maxScoreSentence = tc_string
 			
+			"""
+			Output the results!!
+			"""
 			print "Original sentence:"
 			print f.readline()[:-1]
+			print "Translation created by just applying rules:"
+			print self.translation_to_str(translation)
+			print "Best translation as chosen by LM:"
+			print maxScoreSentence
+			print ""
+			"""
+			#The following can be useful for testing:
 			print "Initial translation:"
 			print self.translation_to_str(translation)
 			print "After genitive and dative handling:"
@@ -229,14 +322,14 @@ class Translator:
 			self.interpret_datives(translation)
 			print self.translation_to_str(translation)
 			print "After add articles and group adjectives:"
-			new_translation = self.flatten_list(self.group_nouns_adj(translation))
+			new_translation = self.group_nouns_adj(translation)
 			self.add_articles(new_translation)
 			self.add_subjects(new_translation)
 			print self.translation_to_str(new_translation)
 			print new_translation
 			print ""
+			"""
 		print "DONE"
-
 
 def main(args):
 	translator = Translator()
