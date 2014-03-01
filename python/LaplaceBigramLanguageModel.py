@@ -34,6 +34,7 @@ class LaplaceBigramLanguageModel:
         score += math.log(count+1)
         unigramCount = self.LaplaceUnigramCounts[sentence[i-1]]
         score -= math.log(unigramCount+self.V)
+    score /= len(sentence)
     return score
 
 
@@ -49,21 +50,21 @@ def main(args):
 	        trainingCorpus.append(sentence)
 	
 	lm = LaplaceBigramLanguageModel(trainingCorpus)
-
-	testPath = '../data/language_model_training_corpus.txt'
+	testPath = '../data/translator_output.txt'
 	f2 = open(testPath)
 	maxScore = float("-inf")
 	maxScoreSentence = ''
-	f2 = ["he affectionately beckoned to oneself spitz and, when that approached, wagged him finger."]
 	for line in f2:
 	    sentence = re.findall(r"[\w']+|[.,!?;]", line.lower())
 	    if len(sentence) > 0:
         	sentence = ['<s>'] + sentence + ['</s>']
 	        score = lm.score(sentence)
+            print sentence
+            print score
     	    if score > maxScore:
         	    maxScore = score
 	            maxScoreSentence = line
-
+    print "\n\nBEST:"
 	print maxScoreSentence
 	print maxScore
 
