@@ -265,7 +265,7 @@ class Translator:
 		for i in xrange(len(russianSentence)):
 			#unicode(russianSentence[i][0], encoding='utf-8').lower()
 			if russianSentence[i][0] == u'\u043D\u0435':
-				if russianSentence[i-1][0].startswith(u'\u043D\u0435'):
+				if russianSentence[i-1][0].startswith(u'\u043D\u0435') or russianSentence[i-1][0].startswith(u'\u043D\u0438'):
 					russianSentence[i][3] == None
 				else:
 					#if i+1 < len(russianSentence) and 'V' in russianSentence[i+1][1]:
