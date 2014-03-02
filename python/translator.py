@@ -409,16 +409,16 @@ class Translator:
 			"""
 			Output the results!!
 			"""
-			print "Original sentence:"
+			print "Original Russian sentence:"
 			print f.readline()[:-1]
-			print "Direct translation:"
+			print "Direct translation into English:"
 			print self.translation_to_str(direct_translation)
 			"""
-			print "All translation candidates:"
+			print "All translation candidates created by our strategies:"
 			for tc in translation_candidates:
 				print self.translation_to_str(tc)
 			"""
-			print "Best translation as chosen by LM:"
+			print "The best translation candidate, as chosen by our Language Model:"
 			print maxScoreSentence
 			print ""
 		print "DONE"
@@ -431,6 +431,7 @@ def main(args):
 	needs a file tagged with Part-Of-Speech information (dev_set_tagged.txt)
 	"""
 	translator.translate('../data/dev_set.txt', '../data/dev_set_tagged.txt')
+	#translator.translate('../data/test_set.txt', '../data/test_set_tagged.txt')
 
 if __name__ == '__main__':
 	args = sys.argv[1:]
