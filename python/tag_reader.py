@@ -8,12 +8,13 @@ class TagReader:
 		"""
 		***How the Corpus works***
 		self.corpus is a list of sentences, where each sentence is a list of "words":
-		A "word" is a triple in the format: [russian word, tag info, russian word stem]
-		For punctuation, I'll just fill the triple with that punctuation mark (e.g., [",", ",", ","])
+		A "word" is a quadruple in the format: [russian word, tag info, russian word stem, string]
+		The last string is a placeholder that will later be used for possible translations.
+		For punctuation, the quadruple will just fill with that punctuation mark (e.g., [",", ",", ",", ""])
 		
 		So, you might iterate through the corpus as follows:
 		for sentence in self.corpus:
-			for word_triple in sentence:
+			for word_tuple in sentence:
 				#do stuff
 		"""
 		self.corpus = []	#see above

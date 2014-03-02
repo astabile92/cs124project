@@ -40,36 +40,36 @@ class LaplaceBigramLanguageModel:
 
 
 def main(args):
-	trainPath = '../data/language_model_training_corpus.txt'
-	f = open(trainPath)
-	trainingCorpus = []
-	for line in f:
-	    sentence = re.findall(r"[\w']+|[.,!?;]", line.lower())
-	    if len(sentence) > 0:
-	        sentence = ['<s>'] + sentence + ['</s>']
-	        trainingCorpus.append(sentence)
-	
-	lm = LaplaceBigramLanguageModel(trainingCorpus)
-	testPath = '../data/translator_output.txt'
-	f2 = open(testPath)
-	maxScore = float("-inf")
-	maxScoreSentence = ''
-	for line in f2:
-	    sentence = re.findall(r"[\w']+|[.,!?;]", line.lower())
-	    if len(sentence) > 0:
-        	sentence = ['<s>'] + sentence + ['</s>']
-	        score = lm.score(sentence)
+    trainPath = '../data/language_model_training_corpus.txt'
+    f = open(trainPath)
+    trainingCorpus = []
+    for line in f:
+        sentence = re.findall(r"[\w']+|[.,!?;]", line.lower())
+        if len(sentence) > 0:
+            sentence = ['<s>'] + sentence + ['</s>']
+            trainingCorpus.append(sentence)
+    
+    lm = LaplaceBigramLanguageModel(trainingCorpus)
+    testPath = '../data/translator_output.txt'
+    f2 = open(testPath)
+    maxScore = float("-inf")
+    maxScoreSentence = ''
+    for line in f2:
+        sentence = re.findall(r"[\w']+|[.,!?;]", line.lower())
+        if len(sentence) > 0:
+            sentence = ['<s>'] + sentence + ['</s>']
+            score = lm.score(sentence)
             print sentence
             print score
-    	    if score > maxScore:
-        	    maxScore = score
-	            maxScoreSentence = line
+            if score > maxScore:
+                maxScore = score
+                maxScoreSentence = line
     print "\n\nBEST:"
-	print maxScoreSentence
-	print maxScore
+    print maxScoreSentence
+    print maxScore
 
 if __name__ == '__main__':
-	args = sys.argv[1:]
-	main(args)
+    args = sys.argv[1:]
+    main(args)
 
 

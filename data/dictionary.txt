@@ -64,7 +64,7 @@
 саду:garden
 себе:oneself
 себя:oneself
-стал:became
+стал:came
 стол:table
 сына:son
 тоже:also
@@ -90,7 +90,7 @@
 такая:such
 чтобы:to
 шпица:spitz
-берете:take
+берете:beret
 быстро:quickly
 гуляла:walked
 женили:married

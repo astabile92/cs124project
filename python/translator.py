@@ -266,7 +266,7 @@ class Translator:
 			#unicode(russianSentence[i][0], encoding='utf-8').lower()
 			if russianSentence[i][0] == u'\u043D\u0435':
 				if russianSentence[i-1][0].startswith(u'\u043D\u0435') or russianSentence[i-1][0].startswith(u'\u043D\u0438'):
-					russianSentence[i][3] == None
+					russianSentence[i][3] = None
 				else:
 					#if i+1 < len(russianSentence) and 'V' in russianSentence[i+1][1]:
 					#	russianSentence[i][3] = ['don\'t', 'didn\'t', 'did not', 'do not']
@@ -286,7 +286,7 @@ class Translator:
 			for word_tuple in sentence:
 				word = word_tuple[0]
 				tag_info = word_tuple[1]
-				if word in self.punctuation:
+				if word in self.punctuation or word not in self.dictionary:
 					direct_translation.append([word, word])
 				else:	#it's a russian word, look it up in the dictionary
 					info = self.dictionary[word].split('.')
@@ -375,6 +375,7 @@ class Translator:
 			Now do some purely aesthetic formatting (capitalization)
 			Note this won't mess up the language model
 			"""		
+			self.capitalize(direct_translation)
 			for tc in translation_candidates:
 				self.capitalize(tc)
 			"""
@@ -410,8 +411,13 @@ class Translator:
 			"""
 			print "Original sentence:"
 			print f.readline()[:-1]
-			print "Translation created by just applying rules:"
-			print self.translation_to_str(translation_candidates[-1])
+			print "Direct translation:"
+			print self.translation_to_str(direct_translation)
+			"""
+			print "All translation candidates:"
+			for tc in translation_candidates:
+				print self.translation_to_str(tc)
+			"""
 			print "Best translation as chosen by LM:"
 			print maxScoreSentence
 			print ""
@@ -420,6 +426,10 @@ class Translator:
 def main(args):
 	translator = Translator()
 	translator.read_dict('../data/dictionary.txt')
+	"""
+	The translator reads the original russian sentences (dev_set.txt) but also
+	needs a file tagged with Part-Of-Speech information (dev_set_tagged.txt)
+	"""
 	translator.translate('../data/dev_set.txt', '../data/dev_set_tagged.txt')
 
 if __name__ == '__main__':
