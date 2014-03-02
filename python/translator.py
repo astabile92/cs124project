@@ -12,7 +12,7 @@ class Translator:
 
 	def __init__(self):
 		self.dictionary = {}
-		self.punctuation = ".,;:"
+		self.punctuation = '.,;:"-'
 
 	def tokenize(self, line):
 		line = line.replace('.', '')
@@ -48,16 +48,19 @@ class Translator:
 				str = str + " " + elem[0]
 		return str
 		
-	def capitalize_proper_nouns(self, translation):
+	def capitalize(self, translation):
 		#add articles
+		first_word = True
 		i = 0
 		while i < len(translation):
 			word_duple = translation[i]
-			word = word_duple[0]
+			word = word_duple[0]			
 			tag = word_duple[1]
-			if tag[0] == 'N' and tag[1] == 'p':		#it's a proper noun
+			if first_word or (tag[0] == 'N' and tag[1] == 'p'):		#it's a proper noun or it starts the sentence
 				new_word = word.capitalize()
 				translation[i][0] = new_word
+				if not word in self.punctuation:
+					first_word = False
 			i += 1
 		
 	#Needed for Strategy 2
@@ -215,40 +218,134 @@ class Translator:
 				i += 1
 			i += 1
 	
+	#STRATEGY 8
+	def shto_translate(self, russianSentence):
+		for i in xrange(len(russianSentence)):
+			#unicode(russianSentence[i][0], encoding='utf-8').lower()
+			if russianSentence[i][0] == u'\u0447\u0442\u043E':
+				if i > 0 and russianSentence[i-1][0] == ',':
+					russianSentence[i][3] = 'that'
+				else:
+					russianSentence[i][3] = 'what'
+
+	#STRATEGY 10
+	def kak_translate(self, russianSentence):
+		for i in xrange(len(russianSentence)):
+			#unicode(russianSentence[i][0], encoding='utf-8').lower()
+			if russianSentence[i][0] == u'\u043A\u0430\u043A':
+				if i == len(russianSentence)-1 or 'V' in russianSentence[i+1][1]:
+					russianSentence[i][3] = 'how'
+				else:
+					russianSentence[i][3] = 'like'
+
+	#STRATEGY 4
+	def he_has_she_has(self, russianSentence):
+		wasWords = [u'\u0431\u044B\u043B\u0430', u'\u0431\u044B\u043B', u'\u0431\u044B\u043B\u043E']
+		for i in xrange(len(russianSentence)-1):
+			#unicode(russianSentence[i][0], encoding='utf-8').lower()
+			if russianSentence[i][0] == u'\u0443' or russianSentence[i][0] == u'\u0423':
+				if russianSentence[i+1][0] == u'\u043D\u0435\u0433\u043E':#HE has
+					russianSentence[i][3] = 'he'
+					if i+2 < len(russianSentence)-1 and russianSentence[i+2][0] in wasWords:#he HAD
+						russianSentence[i+1][3] = 'had'
+						russianSentence[i+2][3] = None#SHOULD I JUST REMOVE THE 'WAS' WORD FROM THE SENTENCE ENTIRELY OR LEAVE IT AS A BLANK? WILL LEAVING THE RUSSIAN WORD IN CAUSE PROBLEMS LATER?
+					else:#he HAS
+						russianSentence[i+1][3] = 'has'
+						
+				if russianSentence[i+1][0] == u'\u043D\u0435\u0435':#SHE has
+					russianSentence[i][3] = 'she'
+					if i+2 < len(russianSentence)-1 and russianSentence[i+2][0] in wasWords:#she HAD
+						russianSentence[i+1][3] = 'had'
+						russianSentence[i+2][3] = None#SHOULD I JUST REMOVE THE 'WAS' WORD FROM THE SENTENCE ENTIRELY OR LEAVE IT AS A BLANK? WILL LEAVING THE RUSSIAN WORD IN CAUSE PROBLEMS LATER?
+					else:#she HAS
+						russianSentence[i+1][3] = 'has'
+
+	#STRATEGY 9
+	def negation(self, russianSentence):
+		for i in xrange(len(russianSentence)):
+			#unicode(russianSentence[i][0], encoding='utf-8').lower()
+			if russianSentence[i][0] == u'\u043D\u0435':
+				if russianSentence[i-1][0].startswith(u'\u043D\u0435'):
+					russianSentence[i][3] == None
+				else:
+					#if i+1 < len(russianSentence) and 'V' in russianSentence[i+1][1]:
+					#	russianSentence[i][3] = ['don\'t', 'didn\'t', 'did not', 'do not']
+					#else:
+					#	russianSentence[i][3] = 'not'
+					russianSentence[i][3] = ['don\'t', 'didn\'t', 'did not', 'do not', 'not']
+	
 	def translate(self, corpus_filename, tagged_corpus_filename):
 		print "BEGINNING TRANSLATION\n"
 		f = open(corpus_filename, 'r')		
 		corpus = self.read_tagged_corpus(tagged_corpus_filename)
 		for sentence in corpus:
-			translation = []
+			direct_translation = []
 			"""
-			Here, we should apply the russian -> russian rules
-			Then, we can move on to the following for-loop
+			First, just do a direct translation for testing/analysis purposes
 			"""
 			for word_tuple in sentence:
 				word = word_tuple[0]
 				tag_info = word_tuple[1]
 				if word in self.punctuation:
-					translation.append([word, word])
-				elif len(word_tuple) > 3 and not word_tuple[3] == "":
-					translation.append([word_tuple[3], tag_info])
-				elif word in self.dictionary:
+					direct_translation.append([word, word])
+				else:	#it's a russian word, look it up in the dictionary
 					info = self.dictionary[word].split('.')
 					english_word = info[0]		#info[1], if it exists, would be the Case (dat, gen, etc.),
-												#  but the tagger should have provided this already
+												#  but the tagger will provide this instead
 					english_word_duple = [english_word, tag_info]
-					translation.append(english_word_duple)
+					direct_translation.append(english_word_duple)
+			
 			"""
-			At this point, the russian -> russian rules should have been applied, so
-			"translation" should contain an english gloss of the russian
+			Now we have a direct translation.
+			Time for da real shiz
+			Apply russian -> russian rules
 			"""
-			self.capitalize_proper_nouns(translation)
+			self.shto_translate(sentence)
+			self.kak_translate(sentence)
+			self.he_has_she_has(sentence)
+			self.negation(sentence)
 			"""
-			Now, apply the english -> english rules, and keep track of candidates
+			Now, do the "direct" translation
 			"""
-			translation_candidates = [ translation[:] ]
+			translation_candidates = []
+			translation_candidates.append([])
+			for word_tuple in sentence:
+				word = word_tuple[0]
+				tag_info = word_tuple[1]
+				english_candidate = word_tuple[3]
+				for tc in translation_candidates[:]:
+					if word in self.punctuation:
+						tc.append([word, word])
+					elif not english_candidate == None:
+						if type(english_candidate) is str:
+							if english_candidate == "":
+								"""
+								There was no proposed candidate, so translate from the dictionary
+								"""
+								info = self.dictionary[word].split('.')
+								english_word = info[0]		#info[1], if it exists, would be the Case (dat, gen, etc.),
+													#  but the tagger should have provided this already
+								english_word_duple = [english_word, tag_info]
+								tc.append(english_word_duple)
+							else:
+								tc.append([english_candidate, tag_info])
+						else:
+							"""
+							There was a list of possible english words, so generate multiple candidates
+							"""
+							tc.append([english_candidate[0], tag_info])
+							for i in xrange( 1, len(english_candidate)):
+								translation = tc[:-1]
+								translation.append([english_candidate[i], tag_info])
+								translation_candidates.append(translation)	
+			"""
+			At this point, the russian -> russian rules have been applied
+			Now, apply the english -> english rules, and continue keeping track of candidates
+			"""
+			#translation_candidates = [ translation[:] ]
 			#Apply Genitive rule:
-			self.interpret_genitives(translation)
+			for tc in translation_candidates:
+				self.interpret_genitives(tc)
 			#Apply Dative rule (many possible results):
 			all_results = []
 			for tc in translation_candidates:
@@ -273,6 +370,13 @@ class Translator:
 			#Apply subjects rule:
 			for tc in translation_candidates:
 				self.add_subjects(tc)
+				
+			"""
+			Now do some purely aesthetic formatting (capitalization)
+			Note this won't mess up the language model
+			"""		
+			for tc in translation_candidates:
+				self.capitalize(tc)
 			"""
 			Now, build the Language Model, which will choose the best candidate
 			"""
@@ -285,7 +389,6 @@ class Translator:
 			        sentence = ['<s>'] + sentence + ['</s>']
 			        trainingCorpus.append(sentence)
 			lm = LaplaceBigramLanguageModel(trainingCorpus)
-			
 			"""
 			Finally, use the Language Model to pick the best candidate!
 			"""
@@ -299,36 +402,19 @@ class Translator:
 					score = lm.score(sentence)
 					#print tc_string
 					#print "\tScore: ", score
-					if score / len(sentence) > maxScore:	#normalizing here!
+					if score > maxScore:	#normalizing here!
 						maxScore = score
 						maxScoreSentence = tc_string
-			
 			"""
 			Output the results!!
 			"""
 			print "Original sentence:"
 			print f.readline()[:-1]
 			print "Translation created by just applying rules:"
-			print self.translation_to_str(translation)
+			print self.translation_to_str(translation_candidates[-1])
 			print "Best translation as chosen by LM:"
 			print maxScoreSentence
 			print ""
-			"""
-			#The following can be useful for testing:
-			print "Initial translation:"
-			print self.translation_to_str(translation)
-			print "After genitive and dative handling:"
-			self.interpret_genitives(translation)
-			self.interpret_datives(translation)
-			print self.translation_to_str(translation)
-			print "After add articles and group adjectives:"
-			new_translation = self.group_nouns_adj(translation)
-			self.add_articles(new_translation)
-			self.add_subjects(new_translation)
-			print self.translation_to_str(new_translation)
-			print new_translation
-			print ""
-			"""
 		print "DONE"
 
 def main(args):

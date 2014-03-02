@@ -61,7 +61,7 @@ class TagReader:
 		"""
 		Read in the corpus at the given filename
 		"""
-		punctuation = ".,:;"
+		punctuation = '.,:;"-'
 		cur_sentence = []
 		f = open(filename, 'r')
 		for line in f:
@@ -70,9 +70,10 @@ class TagReader:
 			word = []
 			if len(split_line) > 0 and split_line[0] in punctuation:
 				punc = punctuation[punctuation.index(split_line[0])]
-				word = [punc, punc, punc]
+				word = [punc, punc, punc, ""]
 			elif len(split_line) == 3:
-				word = [split_line[0].lower(), split_line[1], split_line[2].lower()]
+				#Create the word-tuple: [russian word, tag info, russian lemma, slot for possible proposed english word]
+				word = [split_line[0].lower(), split_line[1], split_line[2].lower(), ""]
 			else:
 				print "ERROR: TagReader couldn't process line: ", line
 			
